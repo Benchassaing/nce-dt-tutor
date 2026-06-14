@@ -1,0 +1,578 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  STUDENT
+  PARENT
+  TEACHER
+  ADMIN
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  MATCH_THE_FOLLOWING
+  FILL_IN_BLANKS
+  DIAGRAM_LABELING
+  SHORT_ANSWER
+  EXAM_STYLE
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  TIMED_OUT
+  ABANDONED
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  MASTERED
+}
+
+enum BadgeCategory {
+  LEARNING
+  QUIZ
+  EXAM
+  STREAK
+  MASTERY
+  SPECIAL
+}
+
+enum SessionType {
+  LEARN
+  PRACTICE
+  QUIZ
+  MOCK_EXAM
+  REVISION
+  FLASHCARDS
+}
+
+enum DocType {
+  TEXTBOOK
+  EXAM_PAPER
+  MARKING_SCHEME
+  TEACHER_NOTES
+}
+
+enum ProcessStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum LinkStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  clerkId       String    @unique
+  email         String    @unique
+  name          String
+  role          Role      @default(STUDENT)
+  avatarUrl     String?
+  xp            Int       @default(0)
+  level         Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  progress      StudentProgress[]
+  quizAttempts  QuizAttempt[]
+  examAttempts  ExamAttempt[]
+  badges        UserBadge[]
+  streak        Streak?
+  studyPlan     StudyPlan?
+  sessions      StudySession[]
+  flashcardReviews FlashcardReview[]
+  parentLinks   ParentLink[] @relation("StudentLinks")
+  teacherLinks  TeacherLink[] @relation("StudentLinks")
+  uploadedDocs  UploadedDocument[] @relation("UploadedBy")
+}
+
+model Streak {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  currentStreak    Int      @default(0)
+  longestStreak    Int      @default(0)
+  lastActiveDate   DateTime?
+  totalActiveDays  Int      @default(0)
+  freezesRemaining Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// CURRICULUM STRUCTURE
+// ============================================
+
+model Unit {
+  id          String   @id @default(cuid())
+  code        String   @unique // "U1", "U2", etc.
+  title       String
+  description String
+  order       Int
+  icon        String
+  color       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  topics      Topic[]
+}
+
+model Topic {
+  id                    String     @id @default(cuid())
+  unitId                String
+  code                  String     // "U1-T1", "U1-T2"
+  title                 String
+  description           String
+  difficulty            Difficulty @default(BEGINNER)
+  order                 Int
+  estimatedMinutes      Int        @default(30)
+  learningObjectives    String[]   @db.Text
+  keyTerms              String[]   @db.Text
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  unit                  Unit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  contentChunks         ContentChunk[]
+  quizQuestions         QuizQuestion[]
+  flashcards            Flashcard[]
+  formulas              Formula[]
+  progress              StudentProgress[]
+
+  @@index([unitId])
+  @@unique([unitId, code])
+}
+
+// ============================================
+// RAG CONTENT
+// ============================================
+
+model ContentChunk {
+  id           String   @id @default(cuid())
+  topicId      String
+  content      String   @db.Text
+  embedding    String   @db.Text // JSON array of floats
+  metadata     Json     // { pageNum, source, type, difficulty, examRelevance }
+  chunkIndex   Int
+  tokenCount   Int
+  createdAt    DateTime @default(now())
+
+  topic        Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId])
+}
+
+// ============================================
+// QUIZ SYSTEM
+// ============================================
+
+model QuizQuestion {
+  id            String       @id @default(cuid())
+  topicId       String
+  type          QuestionType
+  difficulty    Difficulty   @default(BEGINNER)
+  question      String       @db.Text
+  options       Json?        // MCQ options, matching pairs, etc.
+  correctAnswer Json         // Varies by type
+  explanation   String       @db.Text
+  hints         String[]     @db.Text
+  marks         Int          @default(1)
+  examRelevance Float        @default(0.5)
+  tags          String[]     @db.Text
+  sourcePaperId String?      // Link to exam paper if from past paper
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  topic         Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  attempts      QuizAttempt[]
+
+  @@index([topicId])
+  @@index([type])
+}
+
+model QuizAttempt {
+  id            String   @id @default(cuid())
+  userId        String
+  questionId    String
+  userAnswer    Json
+  isCorrect     Boolean
+  timeSpentMs   Int
+  hintsUsed     Int      @default(0)
+  attemptNumber Int      @default(1)
+  xpEarned      Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question      QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([questionId])
+  @@index([userId, questionId])
+}
+
+// ============================================
+// EXAM SYSTEM
+// ============================================
+
+model ExamPaper {
+  id           String   @id @default(cuid())
+  year         Int
+  component    String   @default("Component 1")
+  title        String
+  totalMarks   Int
+  durationMins Int
+  pdfUrl       String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  questions    ExamQuestion[]
+  attempts     ExamAttempt[]
+}
+
+model ExamQuestion {
+  id            String   @id @default(cuid())
+  paperId       String
+  number        Int
+  section       String
+  type          QuestionType
+  marks         Int
+  question      String   @db.Text
+  correctAnswer Json
+  markingScheme Json?
+  topics        String[] @db.Text
+  figureUrls    String[] @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  paper         ExamPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  attempts      ExamQuestionAttempt[]
+
+  @@index([paperId])
+}
+
+model ExamAttempt {
+  id            String         @id @default(cuid())
+  userId        String
+  paperId       String
+  status        AttemptStatus  @default(IN_PROGRESS)
+  startedAt     DateTime       @default(now())
+  completedAt   DateTime?
+  timeSpentMs   Int?
+  totalScore    Float?
+  percentage    Float?
+  topicScores   Json?          // { "U1": 80, "U2": 60 }
+  xpEarned      Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paper         ExamPaper      @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  questionAttempts ExamQuestionAttempt[]
+
+  @@index([userId])
+  @@index([paperId])
+  @@index([userId, status])
+}
+
+model ExamQuestionAttempt {
+  id            String   @id @default(cuid())
+  attemptId     String
+  questionId    String
+  userAnswer    Json
+  score         Float?
+  maxScore      Int
+  feedback      String?
+  timeSpentMs   Int
+  createdAt     DateTime @default(now())
+
+  attempt       ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question      ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+}
+
+// ============================================
+// PROGRESS TRACKING
+// ============================================
+
+model StudentProgress {
+  id                   String         @id @default(cuid())
+  userId               String
+  topicId              String
+  status               ProgressStatus @default(NOT_STARTED)
+  completionPct        Float          @default(0)
+  learnCompleted       Boolean        @default(false)
+  understandCompleted  Boolean        @default(false)
+  practiceCompleted    Boolean        @default(false)
+  checkCompleted       Boolean        @default(false)
+  lastAccessedAt       DateTime       @default(now())
+  timeSpentMs          Int            @default(0)
+  masteryScore         Float          @default(0)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  user                 User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic                Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================================
+// GAMIFICATION
+// ============================================
+
+model Badge {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  name        String
+  description String
+  icon        String
+  color       String
+  category    BadgeCategory
+  criteria    Json          // { type, value }
+  xpReward    Int           @default(0)
+  isSecret    Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+// ============================================
+// STUDY PLANNER
+// ============================================
+
+model StudyPlan {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  examDate      DateTime
+  hoursPerWeek  Int
+  preferredDays Int[]    @db.Integer
+  startDate     DateTime
+  generatedPlan Json     // { weeks: [{ days: [{ date, topics, duration, completed }] }] }
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions      StudySession[]
+}
+
+model StudySession {
+  id            String       @id @default(cuid())
+  userId        String
+  planId        String?
+  topicId       String?
+  scheduledAt   DateTime
+  completedAt   DateTime?
+  durationMins  Int
+  type          SessionType
+  notes         String?
+  xpEarned      Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan          StudyPlan?   @relation(fields: [planId], references: [id], onDelete: SetNull)
+  topic         Topic?       @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([scheduledAt])
+  @@index([userId, scheduledAt])
+}
+
+// ============================================
+// REVISION CONTENT
+// ============================================
+
+model Flashcard {
+  id          String      @id @default(cuid())
+  topicId     String
+  front       String      @db.Text
+  back        String      @db.Text
+  difficulty  Difficulty  @default(BEGINNER)
+  tags        String[]    @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  topic       Topic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  reviews     FlashcardReview[]
+
+  @@index([topicId])
+}
+
+model FlashcardReview {
+  id           String   @id @default(cuid())
+  userId       String
+  flashcardId  String
+  rating       Int      // 1-5 (SM-2: 1=Again, 2=Hard, 3=Good, 4=Easy, 5=Perfect)
+  interval     Int      // Days until next review
+  easeFactor   Float    @default(2.5)
+  nextReview   DateTime
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcard    Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+
+  @@index([userId, nextReview])
+  @@index([flashcardId])
+}
+
+model Formula {
+  id          String   @id @default(cuid())
+  topicId     String
+  name        String
+  formula     String   @db.Text // LaTeX
+  description String   @db.Text
+  variables   Json     // { "V": "Voltage (volts)", "I": "Current (amps)" }
+  unit        String?  // "volts", "ohms", etc.
+  createdAt   DateTime @default(now())
+
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// DIAGRAMS & VISUAL CONTENT
+// ============================================
+
+model Diagram {
+  id          String   @id @default(cuid())
+  topicId     String
+  title       String
+  description String?
+  type        String   // "svg", "canvas", "image"
+  content     Json     // SVG string, canvas JSON, or image URL
+  labels      Json?    // For labeling exercises
+  isKeyDiagram Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// PARENT/TEACHER LINKS
+// ============================================
+
+model ParentLink {
+  id        String     @id @default(cuid())
+  parentId  String
+  studentId String
+  status    LinkStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+
+  parent    User       @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  student   User       @relation("StudentLinks", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+}
+
+model TeacherLink {
+  id        String     @id @default(cuid())
+  teacherId String
+  studentId String
+  status    LinkStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+
+  teacher   User       @relation("TeacherLinks", fields: [teacherId], references: [id], onDelete: Cascade)
+  student   User       @relation("StudentLinks", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, studentId])
+}
+
+// ============================================
+// ADMIN CONTENT MANAGEMENT
+// ============================================
+
+model UploadedDocument {
+  id            String        @id @default(cuid())
+  title         String
+  type          DocType
+  year          Int?
+  fileUrl       String
+  fileName      String
+  fileSize      Int
+  status        ProcessStatus @default(PENDING)
+  processedAt   DateTime?
+  chunksCount   Int           @default(0)
+  errorMessage  String?
+  uploadedBy    String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  admin         User          @relation("UploadedBy", fields: [uploadedBy], references: [id])
+
+  @@index([status])
+  @@index([type])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String @id @default(cuid())
+  userId    String
+  type      String // "streak", "badge", "exam", "reminder", "plan"
+  title     String
+  message   String
+  data      Json?
+  read      Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model ExamTip {
+  id        String   @id @default(cuid())
+  topicId   String?
+  title     String
+  content   String   @db.Text
+  priority  Int      @default(1) // 1=high, 2=medium, 3=low
+  createdAt DateTime @default(now())
+
+  topic     Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+}

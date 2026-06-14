@@ -1,0 +1,41 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "pnpm install && pnpm db:generate && pnpm build"
+  },
+  "deploy": {
+    "startCommand": "pnpm start",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  },
+  "services": [
+    {
+      "name": "web",
+      "build": {
+        "builder": "NIXPACKS"
+      },
+      "deploy": {
+        "startCommand": "pnpm start",
+        "healthcheckPath": "/api/health"
+      }
+    },
+    {
+      "name": "database",
+      "image": "postgres:16-alpine",
+      "variables": {
+        "POSTGRES_DB": "nce_dt_tutor",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "${{RAILWAY_PASSWORD}}"
+      },
+      "volumes": [
+        {
+          "name": "postgres-data",
+          "mountPath": "/var/lib/postgresql/data"
+        }
+      ]
+    }
+  ]
+}

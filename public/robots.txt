@@ -1,0 +1,20 @@
+# NCE DT Tutor - Robots.txt
+User-agent: *
+Allow: /
+
+# Disallow private/admin routes
+Disallow: /dashboard/
+Disallow: /learning/
+Disallow: /quiz/
+Disallow: /exam/
+Disallow: /revision/
+Disallow: /planner/
+Disallow: /admin/
+Disallow: /profile/
+Disallow: /api/
+Disallow: /onboarding/
+Disallow: /sign-in/
+Disallow: /sign-up/
+
+# Sitemap
+Sitemap: https://nce-dt-tutor.vercel.app/sitemap.xml
