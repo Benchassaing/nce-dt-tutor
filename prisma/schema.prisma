@@ -103,17 +103,19 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  progress      StudentProgress[]
-  quizAttempts  QuizAttempt[]
-  examAttempts  ExamAttempt[]
-  badges        UserBadge[]
-  streak        Streak?
-  studyPlan     StudyPlan?
-  sessions      StudySession[]
-  flashcardReviews FlashcardReview[]
-  parentLinks   ParentLink[] @relation("StudentLinks")
-  teacherLinks  TeacherLink[] @relation("StudentLinks")
-  uploadedDocs  UploadedDocument[] @relation("UploadedBy")
+  progress            StudentProgress[]
+  quizAttempts        QuizAttempt[]
+  examAttempts        ExamAttempt[]
+  badges              UserBadge[]
+  streak              Streak?
+  studyPlan           StudyPlan?
+  sessions            StudySession[]
+  flashcardReviews    FlashcardReview[]
+  parentLinks         ParentLink[]       @relation("ParentLinks")
+  teacherLinks        TeacherLink[]      @relation("TeacherLinks")
+  studentParentLinks  ParentLink[]       @relation("StudentLinks")
+  studentTeacherLinks TeacherLink[]      @relation("StudentLinks")
+  uploadedDocs        UploadedDocument[] @relation("UploadedBy")
 }
 
 model Streak {
@@ -168,6 +170,7 @@ model Topic {
   flashcards            Flashcard[]
   formulas              Formula[]
   progress              StudentProgress[]
+  examTips              ExamTip[]
 
   @@index([unitId])
   @@unique([unitId, code])
