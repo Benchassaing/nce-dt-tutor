@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PDFUploader } from "@/components/admin/pdf-uploader";
+import { toast } from "sonner";
 import {
   Upload,
   FileText,
@@ -27,6 +30,7 @@ import {
   Search,
   Filter,
   RotateCcw,
+  Clock,
 } from "lucide-react";
 import { PDFUploader } from "@/components/admin/pdf-uploader";
 
@@ -70,7 +74,6 @@ export default function AdminPage() {
         method: "POST",
       });
       if (!response.ok) throw new Error("Processing failed");
-      // Refresh would happen here in real app
     } catch (error) {
       console.error("Processing error:", error);
     } finally {
@@ -384,7 +387,3 @@ function AnalyticsCard({ title, subtitle, children }: { title: string; subtitle:
     </Card>
   );
 }
-
-// Import missing components
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";

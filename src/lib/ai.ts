@@ -4,7 +4,15 @@ import { prisma } from '@/lib/db';
 import { RAGQuery, RAGResult, RAGSource, ContentChunk, ChunkMetadata } from '@/types';
 
 // Initialize AI clients
-const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
+// Support both Anthropic and OpenRouter
+const useOpenRouter = !!process.env.OPENROUTER_API_KEY;
+const anthropic = (!useOpenRouter && process.env.ANTHROPIC_API_KEY) 
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) 
+  : null;
+
+// OpenRouter client (uses OpenAI-compatible API)
+const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+const openRouterModel = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.1-8b-instruct:free';
 
 // Supabase client for vector search
 const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
@@ -159,7 +167,7 @@ export async function queryRAG(query: RAGQuery): Promise<RAGResult> {
 }
 
 async function generateAnswer(query: string, context: string): Promise<string> {
-  if (!anthropic) {
+  if (!anthropic && !openRouterApiKey) {
     return `Based on the curriculum materials:\n\n${context.substring(0, 1000)}...\n\nFor more details, refer to the textbook sections related to your question.`;
   }
 
@@ -198,18 +206,57 @@ Mini-quiz with immediate feedback
 ### Summary
 Key revision notes (bullet points)`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4000,
-      temperature: 0.3,
-      system: systemPrompt,
-      messages: [{
-        role: 'user',
-        content: `Context from curriculum materials:\n${context}\n\nStudent Question: ${query}\n\nPlease respond following the format above.`,
-      }],
-    });
+    let response: string;
 
-    return response.content[0].type === 'text' ? response.content[0].text : 'Unable to generate response.';
+    if (useOpenRouter && openRouterApiKey) {
+      // Use OpenRouter (OpenAI-compatible API)
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openRouterApiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://nce-dt-tutor.vercel.app',
+          'X-Title': 'NCE DT Tutor',
+        },
+        body: JSON.stringify({
+          model: openRouterModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            {
+              role: 'user',
+              content: `Context from curriculum materials:\n${context}\n\nStudent Question: ${query}\n\nPlease respond following the format above.`,
+            },
+          ],
+          max_tokens: 4000,
+          temperature: 0.3,
+        }),
+      });
+
+      const data = await response.json();
+      response = data.choices?.[0]?.message?.content || 'Unable to generate response.';
+    } else if (anthropic) {
+      // Use Anthropic
+      const anthropicResponse = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        temperature: 0.3,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: `Context from curriculum materials:\n${context}\n\nStudent Question: ${query}\n\nPlease respond following the format above.`,
+          },
+        ],
+      });
+
+      response = anthropicResponse.content[0].type === 'text' 
+        ? anthropicResponse.content[0].text 
+        : 'Unable to generate response.';
+    } else {
+      response = `Based on the curriculum materials:\n\n${context.substring(0, 1000)}...\n\nFor more details, refer to the textbook sections related to your question.`;
+    }
+
+    return response;
   } catch (error) {
     console.error('Answer generation failed:', error);
     return 'I apologize, but I encountered an error generating a response. Please try asking your question again.';
@@ -246,7 +293,7 @@ export async function getTutorResponse(
     };
   }
 
-  if (!anthropic) {
+  if (!anthropic && !openRouterApiKey) {
     return { message: result.answer, step };
   }
 
@@ -259,22 +306,56 @@ export async function getTutorResponse(
   };
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4000,
-      temperature: 0.4,
-      system: `You are a Design & Technology tutor for Mauritian NCE students. ${stepPrompts[step]}`,
-      messages: [
-        ...previousMessages.slice(-6).map(m => ({ role: m.role, content: m.content })),
-        {
-          role: 'user',
-          content: `Curriculum Context:\n${result.chunks.map(c => c.content).join('\n\n')}\n\nStudent Question: ${question}\n\nRespond in the required format.`,
-        },
-      ],
-    });
+    let responseText: string;
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : result.answer;
-    return parseTutorResponse(text, step);
+    if (useOpenRouter && openRouterApiKey) {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openRouterApiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://nce-dt-tutor.vercel.app',
+          'X-Title': 'NCE DT Tutor',
+        },
+        body: JSON.stringify({
+          model: openRouterModel,
+          messages: [
+            { role: 'system', content: `You are a Design & Technology tutor for Mauritian NCE students. ${stepPrompts[step]}` },
+            ...previousMessages.slice(-6).map(m => ({ role: m.role, content: m.content })),
+            {
+              role: 'user',
+              content: `Curriculum Context:\n${result.chunks.map(c => c.content).join('\n\n')}\n\nStudent Question: ${question}\n\nRespond in the required format.`,
+            },
+          ],
+          max_tokens: 4000,
+          temperature: 0.4,
+        }),
+      });
+
+      const data = await response.json();
+      responseText = data.choices?.[0]?.message?.content || result.answer;
+    } else if (anthropic) {
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        temperature: 0.4,
+        system: `You are a Design & Technology tutor for Mauritian NCE students. ${stepPrompts[step]}`,
+        messages: [
+          ...previousMessages.slice(-6).map(m => ({ role: m.role, content: m.content })),
+          {
+            role: 'user',
+            content: `Curriculum Context:\n${result.chunks.map(c => c.content).join('\n\n')}\n\nStudent Question: ${question}\n\nRespond in the required format.`,
+          },
+        ],
+      });
+
+      responseText = response.content[0].type === 'text' ? response.content[0].text : result.answer;
+    } else {
+      responseText = result.answer;
+    }
+
+    // Parse structured response
+    return parseTutorResponse(responseText, step);
   } catch (error) {
     console.error('Tutor response failed:', error);
     return { message: result.answer, step };
@@ -421,31 +502,65 @@ export async function generateQuizFromContent(
   const content = chunks.map(c => c.content).join('\n\n');
   const topic = await prisma.topic.findUnique({ where: { id: topicId }, include: { unit: true } });
 
-  if (!anthropic) return generateFallbackQuiz(topicId, topic?.title || '', count, types, difficulty);
+  if (!anthropic && !openRouterApiKey) return generateFallbackQuiz(topicId, topic?.title || '', count, types, difficulty);
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4000,
-      temperature: 0.5,
-      system: `You are an expert NCE Design & Technology examiner. Create quiz questions based on the Mauritian curriculum.
+    const prompt = `You are an expert NCE Design & Technology examiner. Create quiz questions based on the Mauritian curriculum.
 Generate ${count} questions of types: ${types.join(', ')} at ${difficulty} difficulty.
 Format as JSON array with fields: id, type, difficulty, question, options, correctAnswer, explanation, hints, marks, tags.
-Make questions relevant to Mauritius (local materials, climate, industries).`,
-      messages: [{
-        role: 'user',
-        content: `Curriculum Content:\n${content}\n\nTopic: ${topic?.title} (Unit: ${topic?.unit?.title})\n\nGenerate ${count} quiz questions in JSON format.`,
-      }],
-    });
+Make questions relevant to Mauritius (local materials, climate, industries).`;
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '[]';
+    let responseText: string;
+
+    if (useOpenRouter && openRouterApiKey) {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openRouterApiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://nce-dt-tutor.vercel.app',
+          'X-Title': 'NCE DT Tutor',
+        },
+        body: JSON.stringify({
+          model: openRouterModel,
+          messages: [
+            { role: 'system', content: prompt },
+            { role: 'user', content: `Curriculum Content:\n${content}\n\nTopic: ${topic?.title} (Unit: ${topic?.unit?.title})\n\nGenerate ${count} quiz questions in JSON format.` },
+          ],
+          max_tokens: 4000,
+          temperature: 0.5,
+        }),
+      });
+
+      const data = await response.json();
+      responseText = data.choices?.[0]?.message?.content || '[]';
+    } else if (anthropic) {
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        temperature: 0.5,
+        system: prompt,
+        messages: [
+          {
+            role: 'user',
+            content: `Curriculum Content:\n${content}\n\nTopic: ${topic?.title} (Unit: ${topic?.unit?.title})\n\nGenerate ${count} quiz questions in JSON format.`,
+          },
+        ],
+      });
+
+      responseText = response.content[0].type === 'text' ? response.content[0].text : '[]';
+    } else {
+      responseText = '[]';
+    }
+
+    const text = responseText;
     const questions = JSON.parse(text);
 
-    return questions.map((q: any, i: number) => ({
+    return questions.map((q: unknown, i: number) => ({
       id: `gen_${topicId}_${Date.now()}_${i}`,
       topicId,
       ...q,
-    }));
+    })) as any[];
   } catch (error) {
     console.error('Quiz generation failed:', error);
     return generateFallbackQuiz(topicId, topic?.title || '', count, types, difficulty);
@@ -460,6 +575,7 @@ function generateFallbackQuiz(
   difficulty: string
 ): any[] {
   const questions: any[] = [];
+
   for (let i = 0; i < count; i++) {
     const type = types[i % types.length] as any;
     questions.push({
@@ -477,5 +593,6 @@ function generateFallbackQuiz(
       tags: [topicTitle],
     });
   }
+
   return questions;
 }

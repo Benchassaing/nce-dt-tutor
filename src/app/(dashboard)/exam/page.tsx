@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   FileText,
@@ -393,9 +394,9 @@ export default function ExamPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-3">
-              <TipCard title="Read Questions Carefully", description="NCE questions often have multiple parts. Underline key words like 'sketch', 'explain', 'calculate'.", icon={<FileText className="h-5 w-5" />} />
-              <TipCard title="Time Management", description="90 minutes for ~80 marks = ~1 min/mark. Don't spend 10 minutes on a 3-mark question!", icon={<Clock className="h-5 w-5" />} />
-              <TipCard title="Show Working", description="For calculations, always show steps. Partial marks are awarded for correct method even if final answer is wrong.", icon={<Brain className="h-5 w-5" />} />
+              <TipCard title="Read Questions Carefully" description="NCE questions often have multiple parts. Underline key words like 'sketch', 'explain', 'calculate'." icon={<FileText className="h-5 w-5" />} />
+              <TipCard title="Time Management" description="90 minutes for ~80 marks = ~1 min/mark. Don't spend 10 minutes on a 3-mark question!" icon={<Clock className="h-5 w-5" />} />
+              <TipCard title="Show Working" description="For calculations, always show steps. Partial marks are awarded for correct method even if final answer is wrong." icon={<Brain className="h-5 w-5" />} />
             </div>
           </CardContent>
         </Card>
@@ -403,6 +404,67 @@ export default function ExamPage() {
     </DashboardLayout>
   );
 }
+
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
+const mockQuestions = [
+  {
+    id: "q1",
+    number: 1,
+    section: "A",
+    marks: 5,
+    type: "MULTIPLE_CHOICE",
+    question: "Which one of the following tools is a coping saw?",
+    options: { choices: ["Tool A (image)", "Tool B (image)", "Tool C (image)", "Tool D (image)"] },
+  },
+  {
+    id: "q2",
+    number: 2,
+    section: "A",
+    marks: 5,
+    type: "TRUE_FALSE",
+    question: "Put a tick in the appropriate column to indicate whether the statements are True or False.",
+    statements: [
+      { id: "a", text: "Compasses are used to draw circles." },
+      { id: "b", text: "A try square is used to draw perpendicular lines on metals." },
+      { id: "c", text: "Bamboo stems and fibres are examples of eco materials." },
+      { id: "d", text: "Hardwood trees have needle-like leaves." },
+      { id: "e", text: "Copper is a good conductor of electricity." },
+    ],
+  },
+  {
+    id: "q3",
+    number: 3,
+    section: "A",
+    marks: 5,
+    type: "FILL_IN_BLANKS",
+    question: "Fill in the blanks with the appropriate word(s) from the list given below.",
+    blanks: [
+      "_______ decay naturally.",
+      "_______ is used to make cooking foil.",
+      "_______ is an expensive timber.",
+      "_______ rusts easily.",
+      "_______ are used to cut sheet metals.",
+    ],
+    wordBank: ["Biodegradable materials", "Aluminium", "Teak", "Mild steel", "Snips"],
+  },
+];
+
+const pastPapers = [
+  { id: "2025", year: 2025, title: "NCE 2025 Technology Studies Component 1", duration: 90, marks: 80, questions: 8, status: "available" },
+  { id: "2024", year: 2024, title: "NCE 2024 Technology Studies Design & Tech", duration: 90, marks: 80, questions: 8, status: "available" },
+  { id: "2023", year: 2023, title: "NCE 2023 Technology Studies Component 1", duration: 90, marks: 80, questions: 8, status: "available" },
+];
+
+const mockExams = [
+  { id: "mock-1", title: "Full Mock Exam #1", description: "Complete NCE-style paper with all sections", duration: 90, marks: 100, questions: 15, difficulty: "Mixed" },
+  { id: "mock-2", title: "Topic-Focused Mock: Materials", description: "Questions from Units 1-3 only", duration: 45, marks: 50, questions: 8, difficulty: "INTERMEDIATE" },
+  { id: "mock-3", title: "Quick Practice Mock", description: "Short version for quick revision", duration: 30, marks: 30, questions: 5, difficulty: "BEGINNER" },
+];
 
 function StatCard({ title, value, icon, subtitle }: { title: string; value: string; icon: React.ReactNode; subtitle: string }) {
   return (
@@ -569,3 +631,104 @@ function ExamResults({
     </div>
   );
 }
+
+function StatCard({ title, value, icon, subtitle }: { title: string; value: string; icon: React.ReactNode; subtitle: string }) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-gray-500">{title}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+          </div>
+          <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">{icon}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ExamPaperCard({ paper, onStart }: { paper: typeof pastPapers[0]; onStart: (id: string) => void }) {
+  return (
+    <Card className="card-hover h-full">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className="text-xs">Component 1</Badge>
+          <Badge variant={paper.status === "available" ? "success" : "secondary"} className="text-xs">
+            {paper.status}
+          </Badge>
+        </div>
+        <CardTitle>{paper.year}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-gray-600">{paper.title}</p>
+        <div className="flex items-center gap-4 text-sm text-gray-500">
+          <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {paper.duration} min</span>
+          <span className="flex items-center gap-1"><Target className="h-4 w-4" /> {paper.marks} marks</span>
+          <span className="flex items-center gap-1"><FileText className="h-4 w-4" /> {paper.questions} Qs</span>
+        </div>
+        <Button className="w-full" onClick={() => onStart(paper.id)}>
+          <Play className="h-4 w-4 mr-2" />
+          Start Practice
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MockExamCard({ exam, onStart }: { exam: typeof mockExams[0]; onStart: (id: string) => void }) {
+  return (
+    <Card className="card-hover h-full">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className="text-xs">{exam.difficulty}</Badge>
+          <Badge variant="secondary" className="text-xs">AI Generated</Badge>
+        </div>
+        <CardTitle>{exam.title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-gray-600">{exam.description}</p>
+        <div className="flex items-center gap-4 text-sm text-gray-500">
+          <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {exam.duration} min</span>
+          <span className="flex items-center gap-1"><Target className="h-4 w-4" /> {exam.marks} marks</span>
+          <span className="flex items-center gap-1"><FileText className="h-4 w-4" /> {exam.questions} Qs</span>
+        </div>
+        <Button className="w-full" onClick={() => onStart(exam.id)}>
+          <Play className="h-4 w-4 mr-2" />
+          Start Mock Exam
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TipCard({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) {
+  return (
+    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3 text-primary">
+        {icon}
+      </div>
+      <h4 className="font-medium text-gray-900 mb-1">{title}</h4>
+      <p className="text-sm text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+const pastPapers = [
+  { id: "2025", year: 2025, title: "NCE 2025 Technology Studies Component 1", duration: 90, marks: 80, questions: 8, status: "available" },
+  { id: "2024", year: 2024, title: "NCE 2024 Technology Studies Design & Tech", duration: 90, marks: 80, questions: 8, status: "available" },
+  { id: "2023", year: 2023, title: "NCE 2023 Technology Studies Component 1", duration: 90, marks: 80, questions: 8, status: "available" },
+];
+
+const mockExams = [
+  { id: "mock-1", title: "Full Mock Exam #1", description: "Complete NCE-style paper with all sections", duration: 90, marks: 100, questions: 15, difficulty: "Mixed" },
+  { id: "mock-2", title: "Topic-Focused Mock: Materials", description: "Questions from Units 1-3 only", duration: 45, marks: 50, questions: 8, difficulty: "INTERMEDIATE" },
+  { id: "mock-3", title: "Quick Practice Mock", description: "Short version for quick revision", duration: 30, marks: 30, questions: 5, difficulty: "BEGINNER" },
+];
+
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
