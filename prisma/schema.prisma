@@ -171,6 +171,8 @@ model Topic {
   formulas              Formula[]
   progress              StudentProgress[]
   examTips              ExamTip[]
+  studySessions         StudySession[]
+  diagrams              Diagram[]
 
   @@index([unitId])
   @@unique([unitId, code])
