@@ -42,7 +42,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   }
 }
 
-function cosineSimilarity(a: number[], b: number[]): number {
+export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
   let dotProduct = 0, normA = 0, normB = 0;
   for (let i = 0; i < a.length; i++) {
@@ -82,7 +82,7 @@ export async function searchSimilarChunks(
     where: { ...(topicId && { topicId }) },
     include: { topic: { include: { unit: true } } },
     take: 500,
-  );
+  });
 
   return chunks
     .map(chunk => {
@@ -191,19 +191,7 @@ function fallbackEmbedding(text: string): number[] {
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const embedding = new Array(1024).fill(0);
-  const words = text.toLowerCase().split(/\s+/);
-  words.forEach((word, i) => {
-    let hash = 0;
-    for (let j = 0; j < word.length; j++) {
-      hash = ((hash << 5) - hash) + word.charCodeAt(j);
-      hash |= 0;
-    }
-    const index = Math.abs(hash) % 1024;
-    embedding[index] += 1 / (i + 1);
-  }
-  const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-  return magnitude > 0 ? embedding.map(v => v / magnitude) : embedding;
+  return fallbackEmbedding(text);
 }
 
 export async function searchSimilarChunks(
@@ -308,26 +296,6 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-export async function generateQuizFromContent(topicId: string, count: number = 10, types: string[] = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'FILL_IN_BLANKS'], difficulty: string = 'BEGINNER'): Promise<any[]> {
-  return [];
-}
-
-function fallbackEmbedding(text: string): number[] {
-  const embedding = new Array(1024).fill(0);
-  const words = text.toLowerCase().split(/\s+/);
-  words.forEach((word, i) => {
-    let hash = 0;
-    for (let j = 0; j < word.length; j++) {
-      hash = ((hash << 5) - hash) + word.charCodeAt(j);
-      hash |= 0;
-    }
-    const index = Math.abs(hash) % 1024;
-    embedding[index] += 1 / (i + 1);
-  }
-  const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-  return magnitude > 0 ? embedding.map(v => v / magnitude) : embedding;
-}
-
 export async function generateEmbedding(text: string): Promise<number[]> {
   return fallbackEmbedding(text);
 }
@@ -421,15 +389,4 @@ export async function getTutorResponse(
   }
 
   return { message: result.answer, step: 'learn', sources: result.sources };
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return 0;
-  let dotProduct = 0, normA = 0, normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }

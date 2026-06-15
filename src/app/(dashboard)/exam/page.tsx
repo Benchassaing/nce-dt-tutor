@@ -73,7 +73,6 @@ export default function ExamPage() {
   const handleSubmit = () => { setSubmitted(true); setShowResults(true); timer && clearInterval(timer); };
   const handleRetake = () => { setCurrentQuestion(0); setAnswers({}); setSubmitted(false); setShowResults(false); setTimeRemaining(selectedPaper ? pastPapers.find(p => p.id === selectedPaper)?.duration * 60 || 90 * 60 : 90 * 60); };
   const handleExit = () => { setExamStarted(false); setSelectedPaper(null); setCurrentQuestion(0); setAnswers({}); setSubmitted(false); setShowResults(false); timer && clearInterval(timer); };
-  const formatTime = (s: number) => { const m = Math.floor(s / 60); return `${m}:${(s % 60).toString().padStart(2, "0")}`; };
 
   if (examStarted) {
     const q = mockQuestions[currentQuestion];
