@@ -10,8 +10,19 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  FileText, Clock, Target, Award, Play, RefreshCw, ChevronLeft, ChevronRight,
-  CheckCircle, XCircle, Settings, Brain, Zap
+  FileText,
+  Clock,
+  Target,
+  Award,
+  Play,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  XCircle,
+  Settings,
+  Brain,
+  Zap
 } from "lucide-react";
 
 const pastPapers = [
@@ -32,7 +43,7 @@ const mockQuestions = [
   { id: "q3", number: 3, section: "A", marks: 5, type: "FILL_IN_BLANKS", question: "Fill in the blanks with the appropriate word(s) from the list given below.", blanks: [ "_______ decay naturally.", "_______ is used to make cooking foil.", "_______ is an expensive timber.", "_______ rusts easily.", "_______ are used to cut sheet metals." ], wordBank: ["Biodegradable materials", "Aluminium", "Teak", "Mild steel", "Snips"] },
 ];
 
-const formatTime = (seconds: number) => { const mins = Math.floor(seconds / 60); const secs = seconds % 60; return `${mins}:${secs.toString().padStart(2, "0")}`; };
+const formatTime = (seconds: number) => { const mins = Math.floor(seconds / 60); return `${mins}:${(seconds % 60).toString().padStart(2, "0")}`; };
 
 export default function ExamPage() {
   const [activeTab, setActiveTab] = useState("past-papers");
