@@ -191,8 +191,6 @@ export default function ExamPage() {
   );
 }
 
-const formatTime = (s: number) => { const m = Math.floor(s / 60); return `${m}:${(s % 60).toString().padStart(2, "0")}`; };
-
 function StatCard({ title, value, icon, subtitle }: { title: string; value: string; icon: React.ReactNode; subtitle: string }) {
   return <Card><CardContent className="p-6"><div className="flex items-start justify-between"><div><p className="text-sm text-gray-500">{title}</p><p className="text-3xl font-bold text-gray-900 mt-1">{value}</p><p className="text-xs text-gray-500 mt-1">{subtitle}</p></div><div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">{icon}</div></div></CardContent></Card>;
 }
