@@ -176,7 +176,7 @@ async function main() {
     if (!unit) continue;
 
     await prisma.topic.upsert({
-      where: { unitId_code: { unitId: unit.id, code: topic.code } },
+      where: { unitId_code: { unitId: unit.id, code: topic.code! } },
       update: {
         title: topic.title,
         description: topic.description || '',
