@@ -135,7 +135,7 @@ async function main() {
     { unitCode: 'U7', code: 'U7-T1', title: 'Pneumatic System Components', order: 1, difficulty: 'BEGINNER', estimatedMinutes: 30,
       learningObjectives: ['Identify components', 'Read pneumatic symbols'],
       keyTerms: ['compressor', 'reservoir', 'FRL', 'directional valve', 'cylinder', 'silencer'] },
-    { topicCode: 'U7-T1', title: 'Pneumatic Circuits', order: 2, difficulty: 'INTERMEDIATE', estimatedMinutes: 35,
+    { unitCode: 'U7', code: 'U7-T2', title: 'Pneumatic Circuits', order: 2, difficulty: 'INTERMEDIATE', estimatedMinutes: 35,
       learningObjectives: ['Design basic circuits', 'Control speed'],
       keyTerms: ['single acting', 'double acting', 'flow control', 'sequencing', 'logic valves'] },
     { unitCode: 'U7', code: 'U7-T3', title: 'Hydraulic Systems', order: 3, difficulty: 'INTERMEDIATE', estimatedMinutes: 35,
