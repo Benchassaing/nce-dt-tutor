@@ -239,7 +239,7 @@ export default function PlannerPage() {
         {/* Weekly Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard title="This Week" value={`${weeklyStats.totalMinutes} min`} icon={<Clock className="h-5 w-5 text-blue-600" />} subtitle={`${weeklyStats.completedSessions}/${weeklyStats.totalSessions} sessions`} />
-          <StatCard title="Topics" value={weeklyStats.topicsCovered} icon={<BookOpen className="h-5 w-5 text-green-600" />} subtitle="Covered this week" />
+          <StatCard title="Topics" value={`${weeklyStats.topicsCovered}`} icon={<BookOpen className="h-5 w-5 text-green-600" />} subtitle="Covered this week" />
           <StatCard title="Target" value={`${hoursPerWeek}h/week`} icon={<Target className="h-5 w-5 text-orange-600" />} subtitle={examDate ? `Exam: ${format(new Date(examDate), "MMM d")}` : "No exam date set"} />
           <StatCard title="Progress" value={`${sessions.filter(s => s.completed).length} done`} icon={<CheckCircle className="h-5 w-5 text-green-600" />} subtitle={`${sessions.length} total sessions`} />
         </div>

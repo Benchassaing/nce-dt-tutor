@@ -66,12 +66,12 @@ export default function ExamPage() {
     return () => timer && clearInterval(timer);
   }, [examStarted, submitted, timeRemaining]);
 
-  const handleStartExam = (paperId: string) => { setSelectedPaper(paperId); setExamStarted(true); setTimeRemaining(pastPapers.find(p => p.id === paperId)?.duration * 60 || 90 * 60); setCurrentQuestion(0); setAnswers({}); setSubmitted(false); };
+  const handleStartExam = (paperId: string) => { setSelectedPaper(paperId); setExamStarted(true); setTimeRemaining((pastPapers.find(p => p.id === paperId)?.duration ?? 90) * 60); setCurrentQuestion(0); setAnswers({}); setSubmitted(false); };
   const handleAnswer = (questionId: string, answer: string) => setAnswers(prev => ({ ...prev, [questionId]: answer }));
   const handleNext = () => { if (currentQuestion < mockQuestions.length - 1) setCurrentQuestion(currentQuestion + 1); };
   const handlePrev = () => { if (currentQuestion > 0) setCurrentQuestion(currentQuestion - 1); };
   const handleSubmit = () => { setSubmitted(true); setShowResults(true); timer && clearInterval(timer); };
-  const handleRetake = () => { setCurrentQuestion(0); setAnswers({}); setSubmitted(false); setShowResults(false); setTimeRemaining(selectedPaper ? pastPapers.find(p => p.id === selectedPaper)?.duration * 60 || 90 * 60 : 90 * 60); };
+  const handleRetake = () => { setCurrentQuestion(0); setAnswers({}); setSubmitted(false); setShowResults(false); setTimeRemaining((selectedPaper ? pastPapers.find(p => p.id === selectedPaper)?.duration ?? 90 : 90) * 60); };
   const handleExit = () => { setExamStarted(false); setSelectedPaper(null); setCurrentQuestion(0); setAnswers({}); setSubmitted(false); setShowResults(false); timer && clearInterval(timer); };
 
   if (examStarted) {
