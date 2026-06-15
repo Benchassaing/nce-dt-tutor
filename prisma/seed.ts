@@ -188,7 +188,7 @@ async function main() {
       },
       create: {
         unitId: unit.id,
-        code: topic.code,
+        code: topic.code!,
         title: topic.title,
         description: (topic as any).description || '',
         order: topic.order,
