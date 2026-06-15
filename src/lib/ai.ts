@@ -162,3 +162,62 @@ export async function getTutorResponse(
 
   return { message: result.answer, step: 'learn', sources: result.sources };
 }
+export async function processPDF(
+  fileBuffer: Buffer,
+  fileName: string,
+  topicId: string,
+  options: { source?: string; year?: number | null }
+): Promise<{ chunks: any[]; count: number }> {
+  let text = '';
+  try {
+    const pdfParse = (await import('pdf-parse')).default;
+    const data = await pdfParse(fileBuffer);
+    text = data.text;
+  } catch (e) {
+    text = fileBuffer.toString('utf-8').replace(/[^\x20-\x7E\n]/g, ' ');
+  }
+
+  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+  const chunkSize = 500;
+  const rawChunks: string[] = [];
+
+  for (const para of paragraphs) {
+    if (para.length <= chunkSize) {
+      rawChunks.push(para.trim());
+    } else {
+      const sentences = para.match(/[^.!?]+[.!?]+/g) || [para];
+      let current = '';
+      for (const sentence of sentences) {
+        if ((current + sentence).length > chunkSize && current.length > 0) {
+          rawChunks.push(current.trim());
+          current = sentence;
+        } else {
+          current += sentence;
+        }
+      }
+      if (current.trim()) rawChunks.push(current.trim());
+    }
+  }
+
+  const chunks = await Promise.all(
+    rawChunks.map(async (content, index) => {
+      const embedding = await generateEmbedding(content);
+      return {
+        id: `${topicId}-${fileName.replace(/\W/g, '-')}-${index}`,
+        topicId,
+        content,
+        embedding,
+        metadata: {
+          source: options.source || 'textbook',
+          year: options.year,
+          fileName,
+          pageNum: null,
+        },
+        chunkIndex: index,
+        tokenCount: Math.ceil(content.length / 4),
+      };
+    })
+  );
+
+  return { chunks, count: chunks.length };
+}
