@@ -179,7 +179,7 @@ async function main() {
       where: { unitId_code: { unitId: unit.id, code: topic.code! } },
       update: {
         title: topic.title,
-        description: topic.description || '',
+        description: (topic as any).description || '',
         order: topic.order,
         difficulty: topic.difficulty as any,
         estimatedMinutes: topic.estimatedMinutes,
@@ -190,7 +190,7 @@ async function main() {
         unitId: unit.id,
         code: topic.code,
         title: topic.title,
-        description: topic.description || '',
+        description: (topic as any).description || '',
         order: topic.order,
         difficulty: topic.difficulty as any,
         estimatedMinutes: topic.estimatedMinutes,
