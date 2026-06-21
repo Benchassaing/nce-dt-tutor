@@ -79,7 +79,7 @@ export default function OnboardingPage() {
                   i === step - 1 ? "bg-primary text-white ring-4 ring-primary/20" :
                   "bg-gray-100 text-gray-400"
                 )}>
-                  {i < step - 1 ? <CheckCircle className="h-5 w-5" /> : s.icon}
+                  {i < step - 1 ? <CheckCircle className="h-5 w-5" /> : <s.icon className="h-5 w-5" />}
                 </div>
                 <span className={cn("text-xs font-medium", i <= step - 1 ? "text-gray-900" : "text-gray-400")}>
                   {s.title}
