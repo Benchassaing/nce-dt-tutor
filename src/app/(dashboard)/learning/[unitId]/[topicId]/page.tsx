@@ -337,7 +337,6 @@ export default function LearningPage() {
                         ? "text-primary"
                         : "text-gray-400"
                     )}
-                    disabled={index > currentStep + 1 && !completedSteps.has(learningSteps[index - 1]?.id)}
                   >
                     <div className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all",
