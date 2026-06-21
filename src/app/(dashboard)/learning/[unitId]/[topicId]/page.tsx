@@ -257,7 +257,7 @@ export default function LearningPage() {
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
 
   const step = learningSteps[currentStep];
-  const content = mockLessonContent[step.id as keyof typeof mockLessonContent];
+  const content = mockLessonContent[step.id as keyof typeof mockLessonContent] as any;
 
   const handleNext = () => {
     setCompletedSteps(prev => new Set([...prev, step.id]));
