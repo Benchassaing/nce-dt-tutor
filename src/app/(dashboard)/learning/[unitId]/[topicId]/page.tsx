@@ -360,7 +360,7 @@ export default function LearningPage() {
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <s.icon className="h-5 w-5 text-primary" />
+              <step.icon className="h-5 w-5 text-primary" />
               <CardTitle className="text-lg">{step.label}</CardTitle>
             </div>
           </CardHeader>
