@@ -284,7 +284,7 @@ export default function RevisionPage() {
               total={filteredCards.length}
               progress={progress}
               difficultyFilter={difficultyFilter}
-              setDifficultyFilter={setDifficultyFilter}
+              setDifficultyFilter={setDifficultyFilter as (v: string) => void}
               canPrev={currentFlashcard > 0}
               canNext={currentFlashcard < filteredCards.length - 1}
               mastered={mastered.has(card?.id || "")}
